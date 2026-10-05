@@ -8,7 +8,14 @@ class LocalDiskStorage:
     # Canonical artifact filename for every stored dataset version.
     ARTIFACT_NAME = "data.csv"
 
-    def __init__(self, base_path: str = ".storage"):
+    def __init__(self, base_path: str | None = None):
+        if base_path is None:
+            base_path = os.environ.get("STORAGE_PATH")
+        if base_path is None:
+            # Serverless-safe default: the code dir may be read-only (Vercel),
+            # so prefer /tmp when the current working directory isn't writable.
+            cwd = Path.cwd()
+            base_path = str(cwd / ".storage") if os.access(cwd, os.W_OK) else "/tmp/.storage"
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
 

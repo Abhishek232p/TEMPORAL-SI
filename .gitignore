@@ -1,9 +1,10 @@
-# Python bytecode and caches
+# Python cache
 __pycache__/
 *.pyc
 
-# Local storage/data directory (contains generated data files)
-.storage/
+# Logs
+*.log
 
-# Database files
-*.db
+# SQLite temporary files
+*-shm
+*-wal
