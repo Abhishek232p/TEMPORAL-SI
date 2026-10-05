@@ -3,7 +3,7 @@ import json
 import uuid
 import io
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from packages.core.db.models import Dataset, DatasetVersion, IngestionJob, IngestionCheckpoint, ProvenanceRecord, AuditLog, DataSource
 from packages.core.storage.local import LocalDiskStorage
@@ -29,7 +29,7 @@ class IngestionEngine:
             return
             
         job.status = 'RUNNING'
-        job.started_at = datetime.utcnow()
+        job.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         
         try:
@@ -58,7 +58,7 @@ class IngestionEngine:
             if len(df) == 0:
                 # No new data
                 job.status = 'SUCCEEDED'
-                job.completed_at = datetime.utcnow()
+                job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 job.rows_ingested = 0
                 self.db.commit()
                 return
@@ -73,7 +73,7 @@ class IngestionEngine:
             # Idempotency Check
             if checkpoint and checkpoint.last_successful_content_hash == content_hash:
                 job.status = 'SUCCEEDED'
-                job.completed_at = datetime.utcnow()
+                job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 job.rows_ingested = 0
                 self.db.commit()
                 return
@@ -138,7 +138,7 @@ class IngestionEngine:
             checkpoint.last_successful_timestamp = max_ts.to_pydatetime()
             
             job.status = 'SUCCEEDED'
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             job.rows_ingested = len(df)
             job.dataset_version_id = version_record.id
             
@@ -148,6 +148,6 @@ class IngestionEngine:
             self.db.rollback()
             job = self.db.query(IngestionJob).filter(IngestionJob.id == job_id).first()
             job.status = 'FAILED'
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             job.error_message = str(e)
             self.db.commit()

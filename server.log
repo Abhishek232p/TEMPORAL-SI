@@ -1,0 +1,61 @@
+nohup: ignoring input
+OpenBLAS WARNING - could not determine the L2 cache size on this system, assuming 256k
+INFO:     Started server process [1347]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51960 - "GET /healthz HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51962 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51964 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51966 - "GET /api/health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51970 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51974 - "POST /v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51978 - "POST /v1/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51982 - "POST /v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51986 - "POST /v1/organizations HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:51990 - "POST /v1/projects HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:51994 - "GET /v1/projects HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:51998 - "POST /v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52002 - "GET /v1/projects HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52006 - "POST /v1/projects/None/datasets HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52010 - "POST /v1/projects/None/datasets/None/versions HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52014 - "POST /v1/projects/None/datasets/None/versions/None/profile HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52018 - "POST /v1/projects/None/datasets/None/versions/None/quality HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52022 - "POST /v1/projects/None/datasets/None/versions/None/causal-safety HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52026 - "GET /v1/projects/None/datasets/None/versions/None/profile HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52030 - "GET /v1/projects/None/datasets/None/versions/None/quality HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52034 - "GET /v1/projects/None/datasets/None/versions/None/causal-safety HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:52038 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52042 - "POST /v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52046 - "POST /v1/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52050 - "POST /v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52054 - "POST /v1/organizations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52058 - "POST /v1/projects HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52062 - "GET /v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52066 - "POST /v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52070 - "GET /v1/projects HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:52074 - "POST /v1/projects/26d126d3-49b5-46e2-9fc5-66b8135bc26b/datasets HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52078 - "POST /v1/projects/26d126d3-49b5-46e2-9fc5-66b8135bc26b/datasets/1982ca6b-fb76-40f6-9275-2da2f118887e/versions HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52082 - "POST /v1/projects/26d126d3-49b5-46e2-9fc5-66b8135bc26b/datasets/1982ca6b-fb76-40f6-9275-2da2f118887e/versions/019c2010-e8d8-4152-92bf-aac794473af3/profile HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52086 - "POST /v1/projects/26d126d3-49b5-46e2-9fc5-66b8135bc26b/datasets/1982ca6b-fb76-40f6-9275-2da2f118887e/versions/019c2010-e8d8-4152-92bf-aac794473af3/quality HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52090 - "POST /v1/projects/26d126d3-49b5-46e2-9fc5-66b8135bc26b/datasets/1982ca6b-fb76-40f6-9275-2da2f118887e/versions/019c2010-e8d8-4152-92bf-aac794473af3/causal-safety HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52094 - "GET /v1/projects/26d126d3-49b5-46e2-9fc5-66b8135bc26b/datasets/1982ca6b-fb76-40f6-9275-2da2f118887e/versions/019c2010-e8d8-4152-92bf-aac794473af3/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52098 - "GET /v1/projects/26d126d3-49b5-46e2-9fc5-66b8135bc26b/datasets/1982ca6b-fb76-40f6-9275-2da2f118887e/versions/019c2010-e8d8-4152-92bf-aac794473af3/quality HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52102 - "GET /v1/projects/26d126d3-49b5-46e2-9fc5-66b8135bc26b/datasets/1982ca6b-fb76-40f6-9275-2da2f118887e/versions/019c2010-e8d8-4152-92bf-aac794473af3/causal-safety HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52106 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52110 - "POST /v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52114 - "POST /v1/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52118 - "POST /v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52122 - "POST /v1/organizations HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52126 - "POST /v1/projects HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52130 - "GET /v1/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52134 - "POST /v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52138 - "GET /v1/projects HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:52142 - "POST /v1/projects/0f512c60-212b-46bd-9c0a-e833cf4e91c7/datasets HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52146 - "POST /v1/projects/0f512c60-212b-46bd-9c0a-e833cf4e91c7/datasets/aa60c518-a199-4a43-97b5-0348cd7d7444/versions HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52150 - "POST /v1/projects/0f512c60-212b-46bd-9c0a-e833cf4e91c7/datasets/aa60c518-a199-4a43-97b5-0348cd7d7444/versions/4cf06031-c061-45a6-8a1b-c924b476e6a4/profile HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52154 - "POST /v1/projects/0f512c60-212b-46bd-9c0a-e833cf4e91c7/datasets/aa60c518-a199-4a43-97b5-0348cd7d7444/versions/4cf06031-c061-45a6-8a1b-c924b476e6a4/quality HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52158 - "POST /v1/projects/0f512c60-212b-46bd-9c0a-e833cf4e91c7/datasets/aa60c518-a199-4a43-97b5-0348cd7d7444/versions/4cf06031-c061-45a6-8a1b-c924b476e6a4/causal-safety HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52162 - "GET /v1/projects/0f512c60-212b-46bd-9c0a-e833cf4e91c7/datasets/aa60c518-a199-4a43-97b5-0348cd7d7444/versions/4cf06031-c061-45a6-8a1b-c924b476e6a4/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52166 - "GET /v1/projects/0f512c60-212b-46bd-9c0a-e833cf4e91c7/datasets/aa60c518-a199-4a43-97b5-0348cd7d7444/versions/4cf06031-c061-45a6-8a1b-c924b476e6a4/quality HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52170 - "GET /v1/projects/0f512c60-212b-46bd-9c0a-e833cf4e91c7/datasets/aa60c518-a199-4a43-97b5-0348cd7d7444/versions/4cf06031-c061-45a6-8a1b-c924b476e6a4/causal-safety HTTP/1.1" 200 OK

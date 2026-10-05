@@ -1,21 +1,9 @@
-.env
-.env.*
-!.env.example
-
-.storage/
-*.db
-*.sqlite
-*.sqlite3
-
+# Python bytecode and caches
 __pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.venv/
-venv/
+*.pyc
 
-node_modules/
-.next/
-dist/
-build/
+# Local storage/data directory (contains generated data files)
+.storage/
+
+# Database files
+*.db
