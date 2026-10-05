@@ -1,11 +1,40 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Boolean, CheckConstraint, UniqueConstraint, JSON, Float
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Boolean, CheckConstraint, UniqueConstraint, JSON, Float, TypeDecorator
 from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
 from sqlalchemy.types import JSON
 
 JSON_VARIANT = JSON().with_variant(JSONB, 'postgresql')
+
+
+class UUID(TypeDecorator):
+    """Dialect-agnostic UUID type.
+
+    Stores native UUID on PostgreSQL and 36-char strings on SQLite while
+    accepting/returning ``uuid.UUID`` objects in Python either way. This is
+    what makes the exact same schema work locally, in tests, and in prod.
+    """
+    impl = String(36)
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        return dialect.type_descriptor(String(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if not isinstance(value, uuid.UUID):
+            value = uuid.UUID(str(value))
+        return str(value) if dialect.name != 'postgresql' else value
+
+    def process_result_value(self, value, dialect):
+        if value is None or isinstance(value, uuid.UUID):
+            return value
+        return uuid.UUID(str(value))
+
 
 Base = declarative_base()
 

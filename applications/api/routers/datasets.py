@@ -231,7 +231,7 @@ def create_dataset_profile(project_id: UUID, dataset_id: UUID, version_id: UUID,
     from packages.core.storage.local import LocalDiskStorage
     storage = LocalDiskStorage()
     
-    path = storage.base_path / str(auth.organization_id) / str(project_id) / str(dataset_id) / str(version.version) / "data.csv"
+    path = storage.artifact_path(str(auth.organization_id), str(project_id), str(dataset_id), version.version)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Artifact not found on storage")
         
@@ -315,7 +315,7 @@ def run_quality_validation(
 
     # Load the immutable artifact
     local_storage = LocalDiskStorage()
-    path = local_storage.base_path / str(auth.organization_id) / str(project_id) / str(dataset_id) / str(version.version) / "data.csv"
+    path = local_storage.artifact_path(str(auth.organization_id), str(project_id), str(dataset_id), version.version)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Artifact not found on storage")
 
@@ -440,7 +440,7 @@ def run_causal_safety_validation(
 
     # Load the immutable artifact
     local_storage = LocalDiskStorage()
-    path = local_storage.base_path / str(auth.organization_id) / str(project_id) / str(dataset_id) / str(version.version) / "data.csv"
+    path = local_storage.artifact_path(str(auth.organization_id), str(project_id), str(dataset_id), version.version)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Artifact not found on storage")
 

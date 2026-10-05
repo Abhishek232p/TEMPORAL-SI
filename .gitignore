@@ -1,21 +1,10 @@
-.env
-.env.*
-!.env.example
-
-.storage/
-*.db
-*.sqlite
-*.sqlite3
-
+# Python cache
 __pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.venv/
-venv/
+*.pyc
 
-node_modules/
-.next/
-dist/
-build/
+# Logs
+*.log
+
+# SQLite temporary files
+*-shm
+*-wal
