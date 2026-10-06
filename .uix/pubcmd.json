@@ -1,0 +1,132 @@
+{
+    "base": {
+        "url": "http://127.0.0.1:20000",
+        "description": "通过http协议调用UIX插件的能力, \n调用方式：curl -X POST -H \"Content-Type: application/json\" -d '{}' http://http://127.0.0.1:20000/cmd/<commandId>\n以获取UIX插件的能力"
+    },
+    "commands": {
+        "uix.inspectImage": {
+            "commandId": "uix.inspectImage",
+            "description": "打开图片，让用户标注元素信息",
+            "params": {
+                "input": {
+                    "imagePath": {
+                        "type": "string",
+                        "description": "图片路径, 相对与工作区路径或绝对路径"
+                    }
+                }
+            }
+        },
+        "uix.editWorkflow": {
+            "commandId": "uix.editWorkflow",
+            "description": "打开工作流，让用户确认或者修改",
+            "params": {
+                "input": {
+                    "mmdFilePath": {
+                        "type": "string",
+                        "description": "mermaid文件路径, 相对与工作区路径或绝对路径"
+                    }
+                }
+            }
+        },
+        "uix.loadExui": {
+            "commandId": "uix.loadExui",
+            "description": "打开任意UI",
+            "params": {
+                "input": {
+                    "uiRoot": {
+                        "type": "string",
+                        "description": "UI根路径, 相对与工作区路径或绝对路径"
+                    },
+                    "id": {
+                        "type": "string",
+                        "description": "唯一ID，便于重新打开"
+                    },
+                    "waitForResult": {
+                        "type": "boolean",
+                        "description": "是否等待结果"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "标题"
+                    }
+                }
+            }
+        },
+        "uix.exui.marketplace.quickUpload": {
+            "commandId": "uix.exui.marketplace.quickUpload",
+            "description": "Non-interactive upload EXUI to marketplace",
+            "params": {
+                "input": {
+                    "dirPath": {
+                        "type": "string",
+                        "description": "Absolute path to the EXUI directory to pack & upload"
+                    },
+                    "identifier": {
+                        "type": "string",
+                        "description": "EXUI identifier (e.g., my_exui_comp)"
+                    },
+                    "version": {
+                        "type": "string",
+                        "description": "Semver version string (e.g., 1.0.0)"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Display name (required when creating a new EXUI)"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description (used only when creating a new EXUI)"
+                    },
+                    "coverImage": {
+                        "type": "string",
+                        "description": "Absolute path to a cover image file"
+                    }
+                },
+                "output": {
+                    "exuiId": {
+                        "type": "number",
+                        "description": "The EXUI ID"
+                    },
+                    "version": {
+                        "type": "string",
+                        "description": "The uploaded version"
+                    },
+                    "cdn_url": {
+                        "type": "string",
+                        "description": "The CDN URL of the uploaded resource"
+                    }
+                }
+            }
+        },
+        "uix.exui.marketplace.quickUpdate": {
+            "commandId": "uix.exui.marketplace.quickUpdate",
+            "description": "Non-interactive update EXUI metadata (name, description, cover image)",
+            "params": {
+                "input": {
+                    "identifier": {
+                        "type": "string",
+                        "description": "EXUI identifier to look up"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "New display name"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "New description"
+                    },
+                    "coverImage": {
+                        "type": "string",
+                        "description": "Absolute path to a cover image file"
+                    }
+                },
+                "output": {
+                    "exuiId": {
+                        "type": "number",
+                        "description": "The EXUI ID"
+                    }
+                }
+            }
+        }
+    }
+}
