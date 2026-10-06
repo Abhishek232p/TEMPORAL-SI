@@ -10,7 +10,8 @@ if not DATABASE_URL:
     _default_db = "sqlite:////tmp/temporal_intelligence.db" if os.environ.get("VERCEL") else "sqlite:///temporal_intelligence.db"
     DATABASE_URL = _default_db
 
-engine = create_engine(DATABASE_URL)
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
