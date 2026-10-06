@@ -6,6 +6,9 @@ from sqlalchemy.orm import sessionmaker
 # Serverless platforms (Vercel) have a read-only filesystem except for /tmp, so the
 # SQLite fallback must not be written to the repo root there.
 DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 if not DATABASE_URL:
     _default_db = "sqlite:////tmp/temporal_intelligence.db" if os.environ.get("VERCEL") else "sqlite:///temporal_intelligence.db"
     DATABASE_URL = _default_db

@@ -1,15 +1,49 @@
 {
   "version": 2,
+  "buildCommand": "cd apps/web && npm install && npm run build",
+  "outputDirectory": "apps/web/dist",
   "builds": [
     {
-      "src": "applications/api/main.py",
+      "src": "api/index.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "apps/web/package.json",
+      "use": "@vercel/static-build"
     }
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/chat",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/auth/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/organizations/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/projects/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/datasets/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/health",
+      "dest": "api/index.py"
+    },
+    {
       "src": "/(.*)",
-      "dest": "applications/api/main.py"
+      "dest": "apps/web/dist/$1"
     }
   ]
 }
