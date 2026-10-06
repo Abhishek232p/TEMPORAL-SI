@@ -1,49 +1,58 @@
 {
-  "version": 2,
-  "buildCommand": "cd apps/web && npm install && npm run build",
-  "outputDirectory": "apps/web/dist",
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "temporal-intelligence-api": {
+      "root": ".",
+      "framework": "fastapi",
+      "buildCommand": "pip install -r requirements.txt"
     },
-    {
-      "src": "apps/web/package.json",
-      "use": "@vercel/static-build"
+    "web": {
+      "root": "apps/web",
+      "framework": "vite"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "api/index.py"
+      "source": "/chat",
+      "destination": {
+        "service": "temporal-intelligence-api"
+      }
     },
     {
-      "src": "/chat",
-      "dest": "api/index.py"
+      "source": "/auth/(.*)",
+      "destination": {
+        "service": "temporal-intelligence-api"
+      }
     },
     {
-      "src": "/auth/(.*)",
-      "dest": "api/index.py"
+      "source": "/organizations/(.*)",
+      "destination": {
+        "service": "temporal-intelligence-api"
+      }
     },
     {
-      "src": "/organizations/(.*)",
-      "dest": "api/index.py"
+      "source": "/projects/(.*)",
+      "destination": {
+        "service": "temporal-intelligence-api"
+      }
     },
     {
-      "src": "/projects/(.*)",
-      "dest": "api/index.py"
+      "source": "/datasets/(.*)",
+      "destination": {
+        "service": "temporal-intelligence-api"
+      }
     },
     {
-      "src": "/datasets/(.*)",
-      "dest": "api/index.py"
+      "source": "/health",
+      "destination": {
+        "service": "temporal-intelligence-api"
+      }
     },
     {
-      "src": "/health",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "apps/web/dist/$1"
+      "source": "/(.*)",
+      "destination": {
+        "service": "web"
+      }
     }
   ]
 }
