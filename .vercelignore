@@ -1,0 +1,30 @@
+# Local virtualenvs / caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local data & secrets
+.env
+.env.*
+.storage/
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated / tooling artifacts not needed at build time
+entrypoint_logic.ts
+generate_*.py
+fix*.py
+setup_alembic.py
+smoke_test.py
+tests/
+
+# Local server logs
+*.log
+
+# VCS
+.git/

@@ -20,14 +20,14 @@ def test_live_system():
     print(f"Logged in successfully: user_id={user_id}")
 
     print_step("2. POST /v1/organizations")
-    org_res = requests.post(f"{API_URL}/organizations", headers=headers, json={"name": "Smoke Test Org"})
+    org_res = requests.post(f"{API_URL}/organizations", headers=headers, json={"name": "Smoke Test Org", "slug": f"smoke-org-{int(time.time())}"})
     org_res.raise_for_status()
     org_id = org_res.json()["id"]
     org_headers = {**headers, "X-Organization-ID": org_id}
     print(f"Organization created: {org_id}")
 
     print_step("3. POST /v1/projects")
-    proj_res = requests.post(f"{API_URL}/projects", headers=org_headers, json={"name": "Smoke Project", "description": "E2E Test"})
+    proj_res = requests.post(f"{API_URL}/projects", headers=org_headers, json={"name": "Smoke Project", "slug": f"smoke-proj-{int(time.time())}", "description": "E2E Test"})
     proj_res.raise_for_status()
     proj_id = proj_res.json()["id"]
     print(f"Project created: {proj_id}")
@@ -38,29 +38,29 @@ def test_live_system():
     dates = [pd.to_datetime("2026-01-01T00:00:00Z") + pd.Timedelta(days=i) for i in range(rows)]
     np.random.seed(42)
     # Use noise for target to prevent autocorrelated false positives on the lag
-    target = np.random.normal(0, 1, rows) 
-    
+    target = np.random.normal(0, 1, rows)
+
     df = pd.DataFrame({
         "timestamp": dates,
         "series_id": ["A"] * rows,
         "value": target,
     })
-    
+
     # Legitimate lagged feature
     df["legitimate_lag1"] = df["value"].shift(1)
-    
+
     # Deliberately leaked feature (Target leakage)
     df["leaky_target_copy"] = df["value"] * 2.0
-    
+
     # Deliberate future leak (Lookahead bias / Future Leakage)
     df["leaky_future_shift"] = df["value"].shift(-1)
-    
+
     csv_bytes = df.to_csv(index=False).encode('utf-8')
-    
+
     ds_res = requests.post(f"{API_URL}/projects/{proj_id}/datasets", headers=org_headers, json={"name": "Smoke Dataset"})
     ds_res.raise_for_status()
     dataset_id = ds_res.json()["id"]
-    
+
     upload_res = requests.post(
         f"{API_URL}/projects/{proj_id}/datasets/{dataset_id}/versions",
         headers=org_headers,
@@ -71,9 +71,12 @@ def test_live_system():
     print(f"DatasetVersion uploaded: {version_id}")
 
     print_step("5. Retrieve the DatasetVersion")
-    get_ver = requests.get(f"{API_URL}/projects/{proj_id}/datasets/{dataset_id}/versions/{version_id}", headers=org_headers)
+    get_ver = requests.get(f"{API_URL}/projects/{proj_id}/datasets/{dataset_id}/versions", headers=org_headers)
     get_ver.raise_for_status()
-    print(f"DatasetVersion retrieved: status={get_ver.json()['status']}, rows={get_ver.json()['row_count']}")
+    versions = get_ver.json()
+    assert any(v["id"] == version_id for v in versions), "Uploaded version not present in listing"
+    this_version = next(v for v in versions if v["id"] == version_id)
+    print(f"DatasetVersion retrieved: version={this_version['version']}, rows={this_version['row_count']}")
 
     print_step("6. Generate /profile")
     prof_res = requests.post(f"{API_URL}/projects/{proj_id}/datasets/{dataset_id}/versions/{version_id}/profile", headers=org_headers)
@@ -104,7 +107,7 @@ def test_live_system():
     print(f"Persisted results successfully retrieved via GET.")
 
     print_step("10. Confirm tenant isolation with a second organization")
-    org2_res = requests.post(f"{API_URL}/organizations", headers=headers, json={"name": "Org 2"})
+    org2_res = requests.post(f"{API_URL}/organizations", headers=headers, json={"name": "Org 2", "slug": f"smoke-org2-{int(time.time())}"})
     org2_id = org2_res.json()["id"]
     org2_headers = {**headers, "X-Organization-ID": org2_id}
     

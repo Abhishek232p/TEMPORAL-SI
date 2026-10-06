@@ -5,7 +5,11 @@ from fastapi import UploadFile
 import hashlib
 
 class LocalDiskStorage:
-    def __init__(self, base_path: str = ".storage"):
+    def __init__(self, base_path: str = None):
+        if base_path is None:
+            # Vercel Functions have a read-only filesystem except for /tmp.
+            default_base = "/tmp/.storage" if os.environ.get("VERCEL") else ".storage"
+            base_path = os.environ.get("STORAGE_PATH", default_base)
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
         
@@ -14,7 +18,10 @@ class LocalDiskStorage:
         path = self.base_path / str(org_id) / str(project_id) / str(dataset_id) / str(version)
         path.mkdir(parents=True, exist_ok=True)
         
-        file_path = path / file.filename
+        # Store under a canonical name so the read path is independent of the
+        # client-supplied upload filename (profile/quality/causal readers look
+        # for "data.csv").
+        file_path = path / "data.csv"
         
         # Reset file pointer before reading
         file.file.seek(0)

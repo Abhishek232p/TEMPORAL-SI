@@ -1,0 +1,12 @@
+[project]
+name = "temporal-intelligence-api"
+version = "0.1.0"
+description = "Temporal Intelligence Platform API"
+requires-python = ">=3.10"
+
+# Vercel Python runtime entrypoint.
+# The FastAPI app lives at applications/api/main.py, which is outside the
+# auto-detected locations (app.py/index.py/server.py/main.py at the repo root),
+# so it must be declared explicitly in module:attribute form.
+[tool.vercel]
+entrypoint = "applications.api.main:app"
