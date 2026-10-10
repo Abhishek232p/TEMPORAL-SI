@@ -26,3 +26,28 @@ def test_vercel_health_reports_ephemeral_filesystem_storage(monkeypatch):
     assert body["services"]["storage"]["persistence"] == "ephemeral"
     expected_database_persistence = "ephemeral" if engine.dialect.name == "sqlite" else "configured"
     assert body["services"]["database"]["persistence"] == expected_database_persistence
+
+
+def test_vercel_health_reports_connected_blob_storage(monkeypatch):
+    class HealthyBlobStorage:
+        driver = "vercel_blob"
+        persistence = "durable"
+
+        def check_health(self):
+            return None
+
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setattr(
+        "applications.api.main.get_artifact_storage",
+        lambda: HealthyBlobStorage(),
+    )
+
+    response = TestClient(app).get("/health")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["services"]["storage"] == {
+        "status": "ok",
+        "driver": "vercel_blob",
+        "persistence": "durable",
+    }

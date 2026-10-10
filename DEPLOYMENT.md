@@ -11,19 +11,24 @@ Vite proxies those paths to a local API during development.
    domain, build output, and environment-variable scope before deployment.
 2. Configure `DATABASE_URL` with a managed PostgreSQL connection. Do not rely
    on the SQLite `/tmp` fallback for production data.
-3. Provide durable artifact storage before accepting production uploads. The
-   current `LocalDiskStorage` writes to the instance filesystem. Vercel's
-   writable `/tmp` is temporary, and setting `STORAGE_PATH` does not make that
-   filesystem durable. A persistent object-storage adapter is not present yet.
+3. Create a **private Vercel Blob store** and connect it to this Vercel project
+   for Production and Preview. The Python API uses the official Vercel Blob SDK
+   and reads the connected store's `BLOB_STORE_ID` and `VERCEL_OIDC_TOKEN`
+   automatically. A `BLOB_READ_WRITE_TOKEN` is supported for local development
+   or non-Vercel deployments; keep it in the provider's environment settings.
+   Without Blob credentials the API falls back to local storage, which is
+   ephemeral on Vercel.
 4. Set `CORS_ORIGINS` only when the frontend calls the API from a different
    origin. Same-domain Vercel rewrites do not require cross-origin browser
    access.
 5. Configure credentials in the hosting provider's environment settings. Do
    not commit tokens, database URLs, or model keys.
 
-The `/health` endpoint checks API, database connectivity, and filesystem
-availability. On Vercel it reports `degraded` while database or artifact
-persistence is ephemeral. This is deliberate: a responding function is not
+The `/health` endpoint checks API, database connectivity, and the configured
+artifact store. It reports the storage driver and persistence mode. For Blob it
+creates a private health marker if absent and reads it back to confirm remote
+connectivity. On Vercel it reports `degraded` while the database is SQLite or
+artifacts are stored on the local filesystem. A responding function is not
 evidence that uploads and reports will survive a restart.
 
 ## Vercel deployment
@@ -37,16 +42,16 @@ npx vercel@latest link
 npx vercel@latest --prod
 ```
 
-After configuring production environment variables, verify the health endpoint:
+After connecting the Blob store and configuring the production database, verify
+the health endpoint:
 
 ```powershell
 curl https://<your-deployment>.vercel.app/health
 ```
 
 Require `status: "ok"` and verify database and artifact persistence independently
-before treating the service as production-ready. The current filesystem adapter
-will remain ephemeral on Vercel until durable object storage is implemented;
-the health response will say `degraded` even if API requests succeed.
+before treating the service as production-ready. The health response remains
+`degraded` until both durable PostgreSQL and connected Blob storage are active.
 
 ## Render
 

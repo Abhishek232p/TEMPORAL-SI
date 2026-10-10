@@ -9,12 +9,15 @@ from packages.core.auth.context import AuthContext
 from packages.core.db.models import Project, Dataset, DatasetVersion, AuditLog
 from applications.api.schemas import DatasetCreate, DatasetResponse, DatasetVersionResponse
 from packages.core.auth.policies import Policy
-from packages.core.storage.local import LocalDiskStorage
+from packages.core.storage.factory import get_artifact_storage
+from packages.core.storage.vercel_blob import ArtifactStorageError
 from packages.core.data.parser import parse_dataset_metadata
+import logging
 import uuid
 
 router = APIRouter(prefix="/v1/projects/{project_id}/datasets", tags=["datasets"])
-storage = LocalDiskStorage()
+storage = get_artifact_storage()
+logger = logging.getLogger(__name__)
 
 def log_audit(db, org_id, actor_id, action, resource_type, resource_id):
     audit = AuditLog(
@@ -86,9 +89,13 @@ def upload_dataset_version(project_id: UUID, dataset_id: UUID, file: UploadFile 
     latest_version = db.query(DatasetVersion).filter(DatasetVersion.dataset_id == dataset_id).order_by(DatasetVersion.version.desc()).first()
     next_version = (latest_version.version + 1) if latest_version else 1
     
-    # Preserve the uploaded source and provide a canonical CSV for analysis.
     try:
         metadata = parse_dataset_metadata(file)
+    except Exception as e:
+        logger.exception("Dataset upload could not be parsed")
+        raise HTTPException(status_code=400, detail=f"Failed to process file: {str(e)}")
+
+    try:
         content_hash = storage.save_artifact(
             str(auth.organization_id),
             str(project_id),
@@ -97,8 +104,14 @@ def upload_dataset_version(project_id: UUID, dataset_id: UUID, file: UploadFile 
             file,
             normalized_csv=metadata["normalized_csv"],
         )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to process file: {str(e)}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except (ArtifactStorageError, OSError) as e:
+        logger.exception("Dataset artifact storage failed")
+        raise HTTPException(
+            status_code=503,
+            detail="Artifact storage is unavailable. No dataset version was created.",
+        ) from e
         
     version_record = DatasetVersion(
         id=uuid.uuid4(),
@@ -205,6 +218,32 @@ import io
 from typing import Dict, Any, Optional
 from datetime import datetime
 from pydantic import BaseModel
+
+
+def load_version_dataframe(
+    org_id: UUID,
+    project_id: UUID,
+    dataset_id: UUID,
+    version_number: int,
+) -> pd.DataFrame:
+    try:
+        raw_bytes = storage.read_artifact(
+            str(org_id),
+            str(project_id),
+            str(dataset_id),
+            version_number,
+        )
+    except (ArtifactStorageError, OSError) as e:
+        logger.exception("Dataset artifact read failed")
+        raise HTTPException(
+            status_code=503,
+            detail="Artifact storage is unavailable. Try the analysis again later.",
+        ) from e
+    if raw_bytes is None:
+        raise HTTPException(status_code=404, detail="Artifact not found on storage")
+    return pd.read_csv(io.BytesIO(raw_bytes))
+
+
 class DataProfileResponse(BaseModel):
     id: UUID
     dataset_version_id: UUID
@@ -234,19 +273,12 @@ def create_dataset_profile(project_id: UUID, dataset_id: UUID, version_id: UUID,
     if existing:
         return existing
         
-    # Retrieve raw bytes via Storage (rebuilding path logically)
-    # Using LocalDiskStorage abstraction
-    from packages.core.storage.local import LocalDiskStorage
-    storage = LocalDiskStorage()
-    
-    path = storage.base_path / str(auth.organization_id) / str(project_id) / str(dataset_id) / str(version.version) / "data.csv"
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Artifact not found on storage")
-        
-    with open(path, "rb") as f:
-        raw_bytes = f.read()
-        
-    df = pd.read_csv(io.BytesIO(raw_bytes))
+    df = load_version_dataframe(
+        auth.organization_id,
+        project_id,
+        dataset_id,
+        version.version,
+    )
     
     profiler = DataProfiler()
     profile_data = profiler.profile_dataframe(df)
@@ -321,15 +353,12 @@ def run_quality_validation(
     if not version:
         raise HTTPException(status_code=404, detail="Dataset version not found")
 
-    # Load the immutable artifact
-    local_storage = LocalDiskStorage()
-    path = local_storage.base_path / str(auth.organization_id) / str(project_id) / str(dataset_id) / str(version.version) / "data.csv"
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Artifact not found on storage")
-
-    with open(path, "rb") as f:
-        raw_bytes = f.read()
-    df = pd.read_csv(io.BytesIO(raw_bytes))
+    df = load_version_dataframe(
+        auth.organization_id,
+        project_id,
+        dataset_id,
+        version.version,
+    )
 
     # Build validation config from request
     if validation_request:
@@ -446,15 +475,12 @@ def run_causal_safety_validation(
     if not version:
         raise HTTPException(status_code=404, detail="Dataset version not found")
 
-    # Load the immutable artifact
-    local_storage = LocalDiskStorage()
-    path = local_storage.base_path / str(auth.organization_id) / str(project_id) / str(dataset_id) / str(version.version) / "data.csv"
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Artifact not found on storage")
-
-    with open(path, "rb") as f:
-        raw_bytes = f.read()
-    df = pd.read_csv(io.BytesIO(raw_bytes))
+    df = load_version_dataframe(
+        auth.organization_id,
+        project_id,
+        dataset_id,
+        version.version,
+    )
 
     # Build safety config from request
     if safety_request:

@@ -6,15 +6,16 @@ import pandas as pd
 from datetime import datetime
 from sqlalchemy.orm import Session
 from packages.core.db.models import Dataset, DatasetVersion, IngestionJob, IngestionCheckpoint, ProvenanceRecord, AuditLog, DataSource
-from packages.core.storage.local import LocalDiskStorage
+from packages.core.storage.factory import get_artifact_storage
+from packages.core.storage.local import ArtifactStorage
 from packages.core.data.normalizer import normalize_temporal_data
 from packages.core.data.connectors.rest import RESTConnector
 from packages.core.data.connectors.postgres import PostgreSQLConnector
 
 class IngestionEngine:
-    def __init__(self, db: Session, storage: LocalDiskStorage = None):
+    def __init__(self, db: Session, storage: ArtifactStorage = None):
         self.db = db
-        self.storage = storage or LocalDiskStorage()
+        self.storage = storage or get_artifact_storage()
         
     def _get_connector(self, category: str):
         if category == "REST":

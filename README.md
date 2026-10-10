@@ -67,6 +67,7 @@ python smoke_test.py
 - `docs/`: architecture, data, security, and deployment documentation.
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) before publishing a production deployment.
-The Vercel filesystem is ephemeral; durable production artifact storage is not
-implemented by the current local-filesystem adapter. Production readiness must
-not be inferred from a successful API health response alone.
+Vercel deployments can use the private Vercel Blob adapter when a Blob store is
+connected to the project. Without it, the API falls back to ephemeral function
+storage. Production readiness also requires durable PostgreSQL and a healthy
+`/health` response; a successful API response alone is not sufficient.

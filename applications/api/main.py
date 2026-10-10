@@ -1,4 +1,5 @@
 import os
+import logging
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,13 +10,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from applications.api.routers import organizations, projects, datasets, auth, chat
 from packages.core.db.session import engine
 from packages.core.db.models import Base
-from packages.core.storage.local import LocalDiskStorage
+from packages.core.storage.factory import get_artifact_storage
 
 Base.metadata.create_all(bind=engine)
 
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Temporal Intelligence API", version="0.1.0")
+logger = logging.getLogger(__name__)
 
 cors_origins = [
     origin.strip()
@@ -54,16 +56,19 @@ def health():
     except SQLAlchemyError:
         services["database"]["status"] = "unavailable"
 
+    storage = get_artifact_storage()
+    services["storage"].update({
+        "driver": storage.driver,
+        "persistence": storage.persistence,
+    })
     try:
-        storage = LocalDiskStorage()
-        if not storage.base_path.is_dir() or not os.access(storage.base_path, os.W_OK):
-            services["storage"]["status"] = "unavailable"
-    except OSError:
+        storage.check_health()
+    except Exception:
+        logger.exception("Artifact storage health check failed")
         services["storage"]["status"] = "unavailable"
 
     on_vercel = bool(os.environ.get("VERCEL"))
     if on_vercel:
-        services["storage"]["persistence"] = "ephemeral"
         services["database"]["persistence"] = (
             "ephemeral" if engine.dialect.name == "sqlite" else "configured"
         )
