@@ -1,28 +1,72 @@
 # Temporal Intelligence Platform
 
-> "We build infrastructure that makes AI predictions on temporal data measurable, explainable, reproducible, and continuously verifiable."
+The Temporal Intelligence Platform helps data science and ML teams inspect
+time-series datasets before using them in forecasting workflows. It is a
+dataset-first workbench for profiling, data-quality validation, and temporal
+leakage-risk analysis—not a chatbot or a forecasting-accuracy guarantee.
 
-This repository contains the Temporal Intelligence Platform, a production-ready SaaS system for time-series intelligence. 
-It differs from standard forecasting endpoints by explicitly focusing on the evaluation, provability, and causal-safety of forecasting methods on users' temporal data.
+## What works today
 
-## System Tenets
-1. **Never hide uncertainty:** All predictions must surface confidence intervals.
-2. **Never claim guaranteed accuracy:** The system measures accuracy on the user's data.
-3. **Reproducibility is paramount:** Every experiment and output must trace back through a verifiable pipeline.
-4. **Causal-safety first:** No temporal leakage is permitted in any modeling loop.
+- Organization- and project-scoped workspaces with authenticated API access.
+- Versioned CSV and Parquet dataset uploads, content hashes, and schema metadata.
+- Dataset profiles, data-quality reports, and temporal causal-safety reports.
+- Persisted findings with rule IDs, severity, evidence, detection type, and
+  confidence where the analysis produces it.
+- A web workbench for creating workspaces/projects/datasets, uploading versions,
+  running the analyses, and reviewing results.
+- `/health` probes the API, database, and artifact storage and distinguishes
+  service availability from persistence readiness.
 
-## Architecture
+Temporal safety heuristics are review signals, not causal proof. Structural
+checks and statistical suspicions are reported separately. Findings describe
+the inspected data; they do not guarantee forecast performance.
 
-Please review [ARCHITECTURE.md](docs/ARCHITECTURE.md) for a complete system graph and design principles.
+## Run locally
 
-## Core Services
+Start the API in one terminal from the repository root:
 
-- `apps/web`: The main frontend interface.
-- `apps/api`: Core REST API for programmatic access.
-- `apps/mcp-server`: Model Context Protocol server.
-- `packages/*`: Reusable business logic, validation, and evaluation engines.
-- `models/*`: Adapters and registries for baseline, tree-based, and foundation models.
+```powershell
+python -m uvicorn applications.api.main:app --reload --host 127.0.0.1 --port 8000
+```
 
-## Development
+Start the frontend in another terminal:
 
-See [docker-compose.yml](docker-compose.yml) for local infrastructure.
+```powershell
+cd apps/web
+npm ci
+npm run dev
+```
+
+Open the Vite URL (normally `http://localhost:5173`). The development server
+proxies `/health` and `/v1` to the API at `http://127.0.0.1:8000`. A first sign-in
+creates a user; create a workspace and project, then upload a CSV or Parquet
+dataset version.
+
+## Validate
+
+```powershell
+python -m pytest tests -q
+cd apps/web
+npm run build
+npm run lint
+```
+
+For a running local API, the repository end-to-end smoke journey is:
+
+```powershell
+python smoke_test.py
+```
+
+## Architecture and operations
+
+- `applications/api`: FastAPI routes and request/response schemas.
+- `packages/core`: authentication, storage, profiling, quality, and temporal
+  safety logic.
+- `apps/web`: React/TypeScript workbench built with Vite.
+- `database/migrations`: Alembic schema history.
+- `docs/`: architecture, data, security, and deployment documentation.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) before publishing a production deployment.
+The Vercel filesystem is ephemeral; durable production artifact storage is not
+implemented by the current local-filesystem adapter. Production readiness must
+not be inferred from a successful API health response alone.

@@ -84,6 +84,62 @@ def test_create_organization(auth_user):
     assert members[0]["user_id"] == str(user.id)
     assert members[0]["role"] == "OWNER"
 
+def test_list_organizations_only_returns_active_memberships(auth_user, db):
+    user, token = auth_user
+    existing_org = Organization(
+        id=uuid.uuid4(),
+        name="First Org",
+        slug=f"first-org-{uuid.uuid4().hex}",
+    )
+    own_org = Organization(
+        id=uuid.uuid4(),
+        name="Second Org",
+        slug=f"second-org-{uuid.uuid4().hex}",
+    )
+    unrelated_org = Organization(
+        id=uuid.uuid4(),
+        name="Unrelated Org",
+        slug=f"unrelated-org-{uuid.uuid4().hex}",
+    )
+    db.add_all([
+        existing_org,
+        own_org,
+        unrelated_org,
+        Membership(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            organization_id=existing_org.id,
+            role="OWNER",
+            status="ACTIVE",
+        ),
+        Membership(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            organization_id=own_org.id,
+            role="MEMBER",
+            status="ACTIVE",
+        ),
+        Membership(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            organization_id=unrelated_org.id,
+            role="MEMBER",
+            status="INACTIVE",
+        ),
+    ])
+    db.commit()
+
+    response = client.get(
+        "/v1/organizations",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    assert {org["id"] for org in response.json()} == {
+        str(existing_org.id),
+        str(own_org.id),
+    }
+
 def test_add_member_as_owner(auth_user, other_user):
     user, token = auth_user
     # Create org
@@ -139,4 +195,3 @@ def test_admin_cannot_demote_owner(db, auth_user, other_user):
     )
     assert res.status_code == 403
     assert "ADMIN cannot manage OWNER roles" in res.json()["detail"]
-

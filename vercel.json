@@ -13,6 +13,12 @@
   },
   "rewrites": [
     {
+      "source": "/v1/(.*)",
+      "destination": {
+        "service": "temporal-intelligence-api"
+      }
+    },
+    {
       "source": "/chat",
       "destination": {
         "service": "temporal-intelligence-api"

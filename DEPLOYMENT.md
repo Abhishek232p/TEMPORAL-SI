@@ -1,55 +1,64 @@
-# Deploying to Vercel
+# Deployment and production readiness
 
-The API is a FastAPI app located at `applications/api/main.py`. Vercel's Python
-runtime auto-detects entrypoints only at the repo root (`app.py`, `index.py`,
-`server.py`, `main.py`, `wsgi.py`, `asgi.py`) or in `src/`, `app/`, `api/`.
-Because this app lives under `applications/api/`, the entrypoint is declared
-explicitly in `pyproject.toml`:
+The repository includes a Vercel multi-service configuration: a Vite web
+frontend and a FastAPI API. The API is defined in `applications/api/main.py`
+and exposed to the web service through the `/v1/*` and `/health` rewrites.
+Vite proxies those paths to a local API during development.
 
-```toml
-[tool.vercel]
-entrypoint = "applications.api.main:app"
-```
+## Production prerequisites
 
-## Deploy
+1. Link the repository to the intended Vercel project and verify its production
+   domain, build output, and environment-variable scope before deployment.
+2. Configure `DATABASE_URL` with a managed PostgreSQL connection. Do not rely
+   on the SQLite `/tmp` fallback for production data.
+3. Provide durable artifact storage before accepting production uploads. The
+   current `LocalDiskStorage` writes to the instance filesystem. Vercel's
+   writable `/tmp` is temporary, and setting `STORAGE_PATH` does not make that
+   filesystem durable. A persistent object-storage adapter is not present yet.
+4. Set `CORS_ORIGINS` only when the frontend calls the API from a different
+   origin. Same-domain Vercel rewrites do not require cross-origin browser
+   access.
+5. Configure credentials in the hosting provider's environment settings. Do
+   not commit tokens, database URLs, or model keys.
+
+The `/health` endpoint checks API, database connectivity, and filesystem
+availability. On Vercel it reports `degraded` while database or artifact
+persistence is ephemeral. This is deliberate: a responding function is not
+evidence that uploads and reports will survive a restart.
+
+## Vercel deployment
+
+Use the Vercel project already associated with this repository, or explicitly
+link the correct project before running a production deployment:
 
 ```powershell
-npx vercel@latest login          # one-time, interactive browser auth
-npx vercel@latest --prod         # deploy to production
+npx vercel@latest login
+npx vercel@latest link
+npx vercel@latest --prod
 ```
 
-Or, non-interactively with a token from <https://vercel.com/account/tokens>:
-
-```powershell
-$env:VERCEL_TOKEN = "<your-token>"
-npx vercel@latest --prod --token $env:VERCEL_TOKEN --yes
-```
-
-## Environment variables
-
-| Variable | Required | Notes |
-| --- | --- | --- |
-| `DATABASE_URL` | Recommended | Postgres connection string. Without it the app falls back to SQLite in `/tmp`, which is **ephemeral per function instance** — data does not persist between invocations. Use Vercel Postgres / Neon for real persistence. |
-| `STORAGE_PATH` | Optional | Overrides the artifact directory. Defaults to `/tmp/.storage` on Vercel. |
-
-## Serverless filesystem notes
-
-Vercel Functions have a read-only filesystem except for `/tmp`. The app adapts
-automatically when the `VERCEL` environment variable is set (Vercel sets this
-itself):
-
-- `packages/core/db/session.py` → SQLite fallback becomes `sqlite:////tmp/temporal_intelligence.db`
-- `packages/core/storage/local.py` → artifact storage becomes `/tmp/.storage`
-
-For production you should supply a real `DATABASE_URL`; the `/tmp` SQLite
-fallback exists only so the app boots rather than crashing on import.
-
-## Verifying a deployment
+After configuring production environment variables, verify the health endpoint:
 
 ```powershell
 curl https://<your-deployment>.vercel.app/health
-# {"status":"ok"}
 ```
 
-Then run the end-to-end suite against the live URL by pointing `API_URL` in
-`smoke_test.py` at the deployment.
+Require `status: "ok"` and verify database and artifact persistence independently
+before treating the service as production-ready. The current filesystem adapter
+will remain ephemeral on Vercel until durable object storage is implemented;
+the health response will say `degraded` even if API requests succeed.
+
+## Render
+
+`render.yaml` currently describes the Python API service only. It does not
+configure a durable database, persistent artifact disk, or a separately hosted
+web frontend. Those resources must be selected and configured before Render can
+provide a durable production deployment.
+
+## Live verification
+
+`smoke_test.py` exercises login, organization/project creation, CSV upload,
+profiling, quality validation, temporal safety, report retrieval, and tenant
+isolation against its local development URL. Run it only with a disposable local
+database: it uses fixed demo credentials and creates test workspaces. Do not run
+it against a production tenant.

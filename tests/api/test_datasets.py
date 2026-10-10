@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 import uuid
 import os
 import io
+import pandas as pd
 
 DB_URL = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
 if "sqlite" in DB_URL:
@@ -98,6 +99,44 @@ def test_dataset_version_upload(setup_data):
     assert data["column_count"] == 2
     assert data["content_hash"] is not None
     assert data["schema_hash"] is not None
+
+
+def test_parquet_upload_can_be_profiled(setup_data):
+    token = setup_data["token"]
+    org_id = str(setup_data["org"].id)
+    proj_id = str(setup_data["project"].id)
+    headers = {"Authorization": f"Bearer {token}", "X-Organization-ID": org_id}
+    client = TestClient(app)
+
+    dataset_response = client.post(
+        f"/v1/projects/{proj_id}/datasets",
+        headers=headers,
+        json={"name": "Parquet time series"},
+    )
+    dataset_id = dataset_response.json()["id"]
+    parquet_file = io.BytesIO()
+    pd.DataFrame({
+        "timestamp": ["2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"],
+        "series_id": ["A", "A"],
+        "value": [10.0, 12.0],
+    }).to_parquet(parquet_file, index=False)
+    parquet_file.seek(0)
+
+    upload_response = client.post(
+        f"/v1/projects/{proj_id}/datasets/{dataset_id}/versions",
+        headers=headers,
+        files={"file": ("data.parquet", parquet_file, "application/octet-stream")},
+    )
+    assert upload_response.status_code == 201
+    version_id = upload_response.json()["id"]
+
+    profile_response = client.post(
+        f"/v1/projects/{proj_id}/datasets/{dataset_id}/versions/{version_id}/profile",
+        headers=headers,
+    )
+    assert profile_response.status_code == 201
+    assert profile_response.json()["row_count"] == 2
+    assert profile_response.json()["column_count"] == 3
 
 def test_dataset_cross_tenant_isolation(setup_data, db):
     token = setup_data["token"]

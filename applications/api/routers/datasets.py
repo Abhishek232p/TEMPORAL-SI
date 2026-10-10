@@ -78,17 +78,25 @@ def upload_dataset_version(project_id: UUID, dataset_id: UUID, file: UploadFile 
         raise HTTPException(status_code=404, detail="Dataset not found")
         
     # Validation
-    if not (file.filename.lower().endswith(".csv") or file.filename.lower().endswith(".parquet")):
+    filename = (file.filename or "").lower()
+    if not (filename.endswith(".csv") or filename.endswith(".parquet")):
         raise HTTPException(status_code=400, detail="Only CSV and Parquet files are supported")
         
     # Get latest version number
     latest_version = db.query(DatasetVersion).filter(DatasetVersion.dataset_id == dataset_id).order_by(DatasetVersion.version.desc()).first()
     next_version = (latest_version.version + 1) if latest_version else 1
     
-    # Save raw artifact and hash
+    # Preserve the uploaded source and provide a canonical CSV for analysis.
     try:
-        content_hash = storage.save_artifact(str(auth.organization_id), str(project_id), str(dataset_id), next_version, file)
         metadata = parse_dataset_metadata(file)
+        content_hash = storage.save_artifact(
+            str(auth.organization_id),
+            str(project_id),
+            str(dataset_id),
+            next_version,
+            file,
+            normalized_csv=metadata["normalized_csv"],
+        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to process file: {str(e)}")
         

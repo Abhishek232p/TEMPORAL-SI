@@ -13,6 +13,20 @@ import uuid
 
 router = APIRouter(prefix="/v1/organizations", tags=["organizations"])
 
+@router.get("", response_model=List[OrganizationResponse])
+def list_organizations(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return (
+        db.query(Organization)
+        .join(Membership, Membership.organization_id == Organization.id)
+        .filter(
+            Membership.user_id == user.id,
+            Membership.status == "ACTIVE",
+            Organization.status == "ACTIVE",
+        )
+        .order_by(Organization.name)
+        .all()
+    )
+
 def log_audit(db, org_id, actor_id, action, resource_type, resource_id):
     audit = AuditLog(
         id=uuid.uuid4(),

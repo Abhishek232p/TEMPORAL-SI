@@ -20,6 +20,7 @@ def parse_dataset_metadata(file: UploadFile):
     schema_dict = {col: str(dtype) for col, dtype in zip(df.columns, df.dtypes)}
     schema_str = json.dumps(schema_dict, sort_keys=True)
     schema_hash = hashlib.sha256(schema_str.encode()).hexdigest()
+    normalized_csv = df.to_csv(index=False).encode("utf-8")
     
     # Reset file pointer again just in case
     file.file.seek(0)
@@ -27,5 +28,6 @@ def parse_dataset_metadata(file: UploadFile):
     return {
         "row_count": row_count,
         "column_count": column_count,
-        "schema_hash": schema_hash
+        "schema_hash": schema_hash,
+        "normalized_csv": normalized_csv,
     }
