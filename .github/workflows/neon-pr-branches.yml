@@ -1,0 +1,67 @@
+name: Create/Delete Neon Branch for Pull Request
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+concurrency:
+  group: neon-pr-${{ github.event.number }}
+
+permissions:
+  contents: read
+
+jobs:
+  create_neon_branch:
+    name: Create Neon Branch
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set branch expiration (14 days)
+        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Create Neon branch
+        id: create_neon_branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: preview/pr-${{ github.event.number }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          expires_at: ${{ env.EXPIRES_AT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Apply migrations and run database tests
+        env:
+          DATABASE_URL: ${{ steps.create_neon_branch.outputs.db_url_pooled }}
+        run: |
+          python -m alembic upgrade head
+          python -m pytest tests/database/ -q
+
+  delete_neon_branch:
+    name: Delete Neon Branch
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Neon branch
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: preview/pr-${{ github.event.number }}
+          api_key: ${{ secrets.NEON_API_KEY }}

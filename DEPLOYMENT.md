@@ -60,6 +60,20 @@ configure a durable database, persistent artifact disk, or a separately hosted
 web frontend. Those resources must be selected and configured before Render can
 provide a durable production deployment.
 
+## Neon pull-request branches
+
+`.github/workflows/neon-pr-branches.yml` creates a disposable Neon branch for
+same-repository pull requests, applies the Alembic migrations, and runs the
+database tests against its pooled connection. Closing the pull request deletes
+the branch; Neon also expires it after 14 days. Fork pull requests skip Neon
+provisioning because GitHub does not expose repository secrets to fork
+workflows.
+
+The workflow uses the repository variable `NEON_PROJECT_ID` and secret
+`NEON_API_KEY`. It passes the pooled database URL directly to the migration and
+test step without printing or persisting it as a workflow output. Configure
+both in GitHub Actions settings before relying on the workflow.
+
 ## Live verification
 
 `smoke_test.py` exercises login, organization/project creation, CSV upload,
