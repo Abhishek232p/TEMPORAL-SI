@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 import hmac
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 import uuid
 
@@ -27,36 +28,66 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
     user_id: uuid.UUID
 
+@router.post("/register", response_model=LoginResponse, status_code=201)
+def register(req: LoginRequest, db: Session = Depends(get_db)):
+    if len(req.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Password must be at least 8 characters",
+        )
+
+    email = req.email.strip().lower()
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists. Sign in instead.",
+        )
+
+    user = User(
+        id=uuid.uuid4(),
+        email=email,
+        password_hash=hash_password(req.password),
+        status="ACTIVE",
+    )
+    db.add(user)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists. Sign in instead.",
+        )
+    db.refresh(user)
+
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return LoginResponse(access_token=access_token, user_id=user.id)
+
 @router.post("/login", response_model=LoginResponse, status_code=200)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
     email = req.email.strip().lower()
 
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        user = User(
-            id=uuid.uuid4(),
-            email=email,
-            password_hash=hash_password(req.password),
-            status="ACTIVE"
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
         )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    else:
-        stored_hash = user.password_hash or ""
-        if stored_hash.startswith("hashed_"):
-            password_valid = hmac.compare_digest(stored_hash[7:], req.password)
-            if password_valid:
-                user.password_hash = hash_password(req.password)
-                db.commit()
-        else:
-            password_valid = bool(stored_hash) and verify_password(req.password, stored_hash)
 
-        if not password_valid:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password",
-            )
+    stored_hash = user.password_hash or ""
+    if stored_hash.startswith("hashed_"):
+        password_valid = hmac.compare_digest(stored_hash[7:], req.password)
+        if password_valid:
+            user.password_hash = hash_password(req.password)
+            db.commit()
+    else:
+        password_valid = bool(stored_hash) and verify_password(req.password, stored_hash)
+
+    if not password_valid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
 
     if user.status != "ACTIVE":
         raise HTTPException(

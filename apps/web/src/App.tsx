@@ -78,7 +78,14 @@ async function request<T>(
     let message = `Request failed (${response.status})`;
     try {
       const body = await response.json();
-      message = typeof body.detail === 'string' ? body.detail : message;
+      if (typeof body.detail === 'string') {
+        message = body.detail;
+      } else if (Array.isArray(body.detail)) {
+        const details = body.detail
+          .map((issue: { msg?: unknown }) => issue.msg)
+          .filter((detail: unknown): detail is string => typeof detail === 'string');
+        if (details.length) message = details.join(' ');
+      }
     } catch {
       // Keep the HTTP status message when the server did not return JSON.
     }
@@ -101,6 +108,8 @@ function App() {
   const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY) ?? '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [health, setHealth] = useState<ServiceHealth | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -231,20 +240,35 @@ function App() {
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearMessages();
+    if (authMode === 'register' && password !== passwordConfirmation) {
+      setError('The passwords do not match. Check both password fields and try again.');
+      return;
+    }
     setBusy(true);
     try {
-      const result = await request<{ access_token: string; user_id: string }>('/v1/auth/login', undefined, undefined, {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
+      const isRegistering = authMode === 'register';
+      const result = await request<{ access_token: string; user_id: string }>(
+        isRegistering ? '/v1/auth/register' : '/v1/auth/login',
+        undefined,
+        undefined,
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+        },
+      );
       sessionStorage.setItem(TOKEN_KEY, result.access_token);
       setAuthReady(false);
       setToken(result.access_token);
       setPassword('');
+      setPasswordConfirmation('');
       await loadOrganizations(result.access_token);
-      setNotice('Signed in successfully.');
+      setNotice(isRegistering ? 'Your account is ready. Create a workspace to get started.' : 'Signed in successfully.');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Sign-in failed.');
+      if (reason instanceof ApiError && reason.status === 404) {
+        setError('This site cannot reach its account service yet. Your credentials were not accepted or saved. Contact the site owner and try again once the API is connected.');
+      } else {
+        setError(reason instanceof Error ? reason.message : 'Sign-in failed.');
+      }
     } finally {
       setBusy(false);
     }
@@ -461,15 +485,73 @@ function App() {
         <main className="auth-panel">
           <div className="auth-form-wrap">
             <div className="auth-mobile-brand"><Brand /></div>
-            <h2>Sign in to continue</h2>
-            <p className="subtle">New here? Submitting a new email creates your account.</p>
+            <h2>{authMode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
+            <p className="subtle">
+              {authMode === 'login'
+                ? 'Sign in with the email and password you registered.'
+                : 'Choose an email you can access and create a password. No user ID is needed.'}
+            </p>
+            <div className="auth-mode-switch" role="group" aria-label="Account access">
+              <button
+                type="button"
+                className={authMode === 'login' ? 'is-selected' : ''}
+                aria-pressed={authMode === 'login'}
+                onClick={() => { setAuthMode('login'); clearMessages(); }}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                className={authMode === 'register' ? 'is-selected' : ''}
+                aria-pressed={authMode === 'register'}
+                onClick={() => { setAuthMode('register'); clearMessages(); }}
+              >
+                Create account
+              </button>
+            </div>
             {error && <Notice tone="error">{error}</Notice>}
             <form onSubmit={handleLogin} className="form-stack">
               <label>Email address<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@team.com" /></label>
-              <label>Password<input type="password" autoComplete="current-password" required minLength={1} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" /></label>
-              <button className="button button-primary button-wide" type="submit" disabled={busy}>{busy ? 'Checking credentials…' : 'Continue to workspace'}<span aria-hidden="true">→</span></button>
+              <label>
+                {authMode === 'register' ? 'Create a password' : 'Password'}
+                <input
+                  type="password"
+                  autoComplete={authMode === 'register' ? 'new-password' : 'current-password'}
+                  required
+                  minLength={authMode === 'register' ? 8 : 1}
+                  maxLength={72}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder={authMode === 'register' ? 'At least 8 characters' : 'Enter your password'}
+                />
+              </label>
+              {authMode === 'register' && (
+                <label>
+                  Confirm password
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    minLength={8}
+                    maxLength={72}
+                    value={passwordConfirmation}
+                    onChange={(event) => setPasswordConfirmation(event.target.value)}
+                    placeholder="Enter the same password again"
+                  />
+                </label>
+              )}
+              <button className="button button-primary button-wide" type="submit" disabled={busy}>
+                {busy
+                  ? (authMode === 'register' ? 'Creating account…' : 'Signing in…')
+                  : (authMode === 'register' ? 'Create account' : 'Sign in')}
+                <span aria-hidden="true">→</span>
+              </button>
             </form>
-            <p className="auth-secure">Your session is stored for this browser tab and expires automatically.</p>
+            <p className="auth-secure">
+              {authMode === 'register'
+                ? 'Your password is stored securely. After registration, create a workspace to begin.'
+                : 'Your session stays in this browser tab and expires automatically.'}
+            </p>
           </div>
         </main>
       </div>

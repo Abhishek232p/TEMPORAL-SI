@@ -1415,6 +1415,43 @@ summary:focus-visible {
   line-height: 1.6;
 }
 
+.auth-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0 0 19px;
+  padding: 4px;
+  border: 1px solid var(--rule-strong);
+  background: #e9eee8;
+}
+
+.auth-mode-switch button {
+  min-height: 38px;
+  border: 1px solid transparent;
+  color: #476157;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.auth-mode-switch button:hover {
+  color: var(--ink);
+  background: #f7f9f5;
+}
+
+.auth-mode-switch button.is-selected {
+  border-color: #cbd8ce;
+  color: var(--ink);
+  background: #fff;
+}
+
+.auth-mode-switch button:focus-visible {
+  outline: 2px solid #276c59;
+  outline-offset: 2px;
+}
+
 .auth-form-wrap .section-label {
   margin: 0 0 10px;
 }

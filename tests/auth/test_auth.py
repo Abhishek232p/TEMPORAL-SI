@@ -88,7 +88,42 @@ def test_login_rejects_invalid_password():
     db.close()
 
 
-def test_login_hashes_new_account_password():
+def test_registration_hashes_password_and_login_authenticates_account():
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app = FastAPI()
+    app.dependency_overrides[get_db] = override_get_db
+    app.include_router(auth_router.router)
+
+    client = TestClient(app)
+    response = client.post(
+        "/v1/auth/register",
+        json={"email": "new@example.com", "password": "a-strong-password"},
+    )
+    assert response.status_code == 201
+
+    db = TestingSessionLocal()
+    user = db.query(User).filter(User.email == "new@example.com").one()
+    assert verify_password("a-strong-password", user.password_hash)
+    db.close()
+
+    response = client.post(
+        "/v1/auth/login",
+        json={"email": "new@example.com", "password": "a-strong-password"},
+    )
+    assert response.status_code == 200
+
+
+def test_login_does_not_create_accounts_for_unknown_emails():
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -106,11 +141,59 @@ def test_login_hashes_new_account_password():
 
     response = TestClient(app).post(
         "/v1/auth/login",
-        json={"email": "new@example.com", "password": "a-strong-password"},
+        json={"email": "unknown@example.com", "password": "a-strong-password"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 401
 
     db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "new@example.com").one()
+    assert db.query(User).count() == 0
+    db.close()
+
+
+def test_register_creates_account_and_rejects_duplicate_email():
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app = FastAPI()
+    app.dependency_overrides[get_db] = override_get_db
+    app.include_router(auth_router.router)
+    client = TestClient(app)
+
+    response = client.post(
+        "/v1/auth/register",
+        json={"email": "  New.User@example.com ", "password": "a-strong-password"},
+    )
+    assert response.status_code == 201
+    assert response.json()["user_id"]
+    assert response.json()["access_token"]
+
+    db = TestingSessionLocal()
+    user = db.query(User).filter(User.email == "new.user@example.com").one()
     assert verify_password("a-strong-password", user.password_hash)
     db.close()
+
+    response = client.post(
+        "/v1/auth/register",
+        json={"email": "new.user@example.com", "password": "another-strong-password"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "An account with this email already exists. Sign in instead."
+
+
+def test_register_requires_password_of_at_least_eight_characters():
+    app = FastAPI()
+    app.include_router(auth_router.router)
+    response = TestClient(app).post(
+        "/v1/auth/register",
+        json={"email": "new@example.com", "password": "short"},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Password must be at least 8 characters"
