@@ -63,16 +63,18 @@ provide a durable production deployment.
 ## Neon pull-request branches
 
 `.github/workflows/neon-pr-branches.yml` creates a disposable Neon branch for
-same-repository pull requests, applies the Alembic migrations, and runs the
-database tests against its pooled connection. Closing the pull request deletes
-the branch; Neon also expires it after 14 days. Fork pull requests skip Neon
-provisioning because GitHub does not expose repository secrets to fork
-workflows.
+same-repository pull requests, applies the Alembic migrations through the
+branch's direct (unpooled) connection, verifies PostgreSQL identity and the
+current migration revision, and runs the database regression tests against an
+isolated SQLite fixture. Closing the pull request deletes the branch; Neon also
+expires it after 14 days. Fork pull requests skip Neon provisioning because
+GitHub does not expose repository secrets to fork workflows.
 
 The workflow uses the repository variable `NEON_PROJECT_ID` and secret
-`NEON_API_KEY`. It passes the pooled database URL directly to the migration and
-test step without printing or persisting it as a workflow output. Configure
-both in GitHub Actions settings before relying on the workflow.
+`NEON_API_KEY`. The direct Neon database URL is passed only to migration and
+verification steps and is never printed or persisted as a workflow output.
+Configure both in GitHub Actions settings before relying on the workflow. The
+workflow must not be pointed at the production database.
 
 ## Live verification
 

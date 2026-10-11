@@ -43,14 +43,59 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
-
-      - name: Apply migrations and run database tests
-        env:
-          DATABASE_URL: ${{ steps.create_neon_branch.outputs.db_url_pooled }}
         run: |
-          python -m alembic upgrade head
-          python -m pytest tests/database/ -q
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Apply migrations to the Neon branch
+        env:
+          DATABASE_URL: ${{ steps.create_neon_branch.outputs.db_url }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m alembic upgrade head
+
+      - name: Verify Neon migration and schema
+        env:
+          DATABASE_URL: ${{ steps.create_neon_branch.outputs.db_url }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python - <<'PY'
+          import os
+
+          from alembic.config import Config
+          from alembic.script import ScriptDirectory
+          from sqlalchemy import create_engine, inspect, text
+
+          database_url = os.environ.get("DATABASE_URL")
+          if not database_url:
+              raise RuntimeError("DATABASE_URL is not set for Neon branch verification")
+
+          engine = create_engine(database_url)
+          with engine.connect() as connection:
+              if connection.dialect.name != "postgresql":
+                  raise RuntimeError("Neon verification requires PostgreSQL")
+              database_name, schema_name = connection.execute(
+                  text("SELECT current_database(), current_schema()")
+              ).one()
+              current_revision = connection.execute(
+                  text("SELECT version_num FROM alembic_version")
+              ).scalar_one()
+
+          expected_revision = ScriptDirectory.from_config(Config("alembic.ini")).get_current_head()
+          if current_revision != expected_revision:
+              raise RuntimeError(
+                  f"Neon migration revision {current_revision} does not match "
+                  f"repository head {expected_revision}"
+              )
+
+          print(
+              f"Verified PostgreSQL database '{database_name}', schema '{schema_name}', "
+              f"migration revision {current_revision}"
+          )
+          engine.dispose()
+          PY
+
+      - name: Run database regression tests
+        run: python -m pytest tests/database -q
 
   delete_neon_branch:
     name: Delete Neon Branch
