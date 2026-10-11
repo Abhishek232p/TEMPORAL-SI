@@ -5,11 +5,6 @@ frontend and a FastAPI API. The API is defined in `applications/api/main.py`
 and exposed to the web service through the `/v1/*` and `/health` rewrites.
 Vite proxies those paths to a local API during development.
 
-The multi-service routing configuration is present both at the repository root
-and in `apps/web/vercel.json`. This supports Vercel projects configured with
-either the repository root or `apps/web` as their Root Directory. The web-root
-configuration points its API service back to the repository root.
-
 ## Production prerequisites
 
 1. Link the repository to the intended Vercel project and verify its production
